@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { errMsg } from "@/lib/err";
 import { requireUser, authErrorResponse } from "@/lib/auth";
+import { resolveStudentForUser } from "@/lib/student";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { gradeAnswer } from "@/lib/ai/grade";
-import { DEFAULT_STUDENT_ID } from "@/lib/constants";
 import type { GeneratedProblem } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -17,7 +17,8 @@ export async function POST(req: Request, { params }: Ctx) {
   const { id } = await params;
   const supa = createAdminClient();
   try {
-    await requireUser();
+    const user = await requireUser();
+    const me = await resolveStudentForUser(user);
     const { submitted_answer } = (await req.json()) as {
       submitted_answer: string;
     };
@@ -27,11 +28,20 @@ export async function POST(req: Request, { params }: Ctx) {
 
     const { data: gp, error } = await supa
       .from("generated_problems")
-      .select("id, variant_latex, generated_answer")
+      .select("id, variant_latex, generated_answer, wrong_items!inner(student_id)")
       .eq("id", id)
-      .maybeSingle<Pick<GeneratedProblem, "id" | "variant_latex" | "generated_answer">>();
+      .maybeSingle<
+        Pick<GeneratedProblem, "id" | "variant_latex" | "generated_answer"> & {
+          wrong_items: { student_id: string } | { student_id: string }[];
+        }
+      >();
     if (error) throw error;
     if (!gp) return NextResponse.json({ error: "not found" }, { status: 404 });
+    const owner = Array.isArray(gp.wrong_items)
+      ? gp.wrong_items[0]?.student_id
+      : gp.wrong_items?.student_id;
+    if (owner !== me.studentId)
+      return NextResponse.json({ error: "권한 없음 (본인 문제가 아님)" }, { status: 403 });
     if (!gp.generated_answer) {
       return NextResponse.json(
         { error: "이 유사문제에 정답 데이터가 없어 채점 불가" },
@@ -49,7 +59,7 @@ export async function POST(req: Request, { params }: Ctx) {
       .from("attempts")
       .insert({
         generated_problem_id: id,
-        student_id: DEFAULT_STUDENT_ID,
+        student_id: me.studentId,
         submitted_answer,
         is_correct: grade.is_correct,
         grade_method: grade.method,

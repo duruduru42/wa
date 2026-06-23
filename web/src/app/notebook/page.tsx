@@ -1,7 +1,7 @@
 import { errMsg } from "@/lib/err";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_STUDENT_ID } from "@/lib/constants";
+import { requireMyStudent } from "@/lib/student";
 import { ERROR_TAGS } from "@/lib/ai/schemas";
 import { Card, ErrorTags, VerificationBadge } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
@@ -15,6 +15,7 @@ export default async function NotebookPage({
   searchParams: Promise<{ tag?: string }>;
 }) {
   const { tag } = await searchParams;
+  const me = await requireMyStudent();
   let items: WrongItem[] = [];
   let dbError: string | null = null;
   try {
@@ -22,7 +23,7 @@ export default async function NotebookPage({
     let q = supa
       .from("wrong_items")
       .select("*")
-      .eq("student_id", DEFAULT_STUDENT_ID)
+      .eq("student_id", me.studentId)
       .order("created_at", { ascending: false });
     if (tag) q = q.contains("error_tags", [tag]);
     const { data, error } = await q;

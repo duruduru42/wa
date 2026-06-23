@@ -2,6 +2,7 @@ import { errMsg } from "@/lib/err";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireMyStudent } from "@/lib/student";
 import { Tex, MixedText } from "@/components/Tex";
 import {
   Card,
@@ -20,6 +21,7 @@ export default async function ItemPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const me = await requireMyStudent();
   const supa = createAdminClient();
   const { data, error } = await supa
     .from("wrong_items")
@@ -31,6 +33,7 @@ export default async function ItemPage({
   if (!data) notFound();
 
   const item = data as WrongItem & { generated_problems: GeneratedProblem[] };
+  if (item.student_id !== me.studentId) notFound();
   const analyzed = item.status === "analyzed" || item.status === "done";
 
   return (

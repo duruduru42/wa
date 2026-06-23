@@ -1,7 +1,7 @@
 import { errMsg } from "@/lib/err";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_STUDENT_ID } from "@/lib/constants";
+import { requireMyStudent } from "@/lib/student";
 import { Card } from "@/components/ui";
 import type { WrongItem } from "@/lib/types";
 
@@ -41,20 +41,15 @@ function Bar({
 }
 
 export default async function StatsPage() {
+  const me = await requireMyStudent();
   const supa = createAdminClient();
   let items: WrongItem[] = [];
   let attempts: { is_correct: boolean | null }[] = [];
   let dbError: string | null = null;
   try {
     const [a, b] = await Promise.all([
-      supa
-        .from("wrong_items")
-        .select("*")
-        .eq("student_id", DEFAULT_STUDENT_ID),
-      supa
-        .from("attempts")
-        .select("is_correct")
-        .eq("student_id", DEFAULT_STUDENT_ID),
+      supa.from("wrong_items").select("*").eq("student_id", me.studentId),
+      supa.from("attempts").select("is_correct").eq("student_id", me.studentId),
     ]);
     if (a.error) throw a.error;
     items = (a.data ?? []) as WrongItem[];

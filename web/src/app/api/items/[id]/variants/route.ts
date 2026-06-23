@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errMsg } from "@/lib/err";
 import { requireUser, authErrorResponse } from "@/lib/auth";
+import { resolveStudentForUser } from "@/lib/student";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runStage5Variants } from "@/lib/ai/stage5-variants";
 import { verifyAnswerOnly } from "@/lib/ai/stage3-verify";
@@ -18,7 +19,8 @@ export async function POST(req: Request, { params }: Ctx) {
   const { id } = await params;
   const supa = createAdminClient();
   try {
-    await requireUser();
+    const user = await requireUser();
+    const me = await resolveStudentForUser(user);
     const body = (await req.json().catch(() => ({}))) as {
       mode?: "A" | "B";
       count?: number;
@@ -33,6 +35,8 @@ export async function POST(req: Request, { params }: Ctx) {
       .eq("id", id)
       .maybeSingle<WrongItem>();
     if (error) throw error;
+    if (item && item.student_id !== me.studentId)
+      return NextResponse.json({ error: "권한 없음 (본인 오답이 아님)" }, { status: 403 });
     if (!item || !item.problem_latex || !item.correct_answer) {
       return NextResponse.json(
         { error: "먼저 분석(정답·풀이)을 완료해야 유사문제를 만들 수 있음" },

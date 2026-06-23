@@ -1,6 +1,6 @@
 import "katex/dist/katex.min.css";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_STUDENT_ID } from "@/lib/constants";
+import { requireMyStudent } from "@/lib/student";
 import { TexServer, MixedTextServer } from "@/components/TexServer";
 import type { WrongItem } from "@/lib/types";
 
@@ -16,11 +16,12 @@ export default async function PrintNotebook({
   const { ids, mode = "full", tag } = await searchParams;
   const exam = mode === "exam";
 
+  const me = await requireMyStudent();
   const supa = createAdminClient();
   let q = supa
     .from("wrong_items")
     .select("*")
-    .eq("student_id", DEFAULT_STUDENT_ID)
+    .eq("student_id", me.studentId)
     .order("created_at", { ascending: true });
   if (ids) q = q.in("id", ids.split(",").filter(Boolean));
   if (tag) q = q.contains("error_tags", [tag]);

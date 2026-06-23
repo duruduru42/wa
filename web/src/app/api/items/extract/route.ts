@@ -4,12 +4,8 @@ import { requireUser, authErrorResponse } from "@/lib/auth";
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runStage1Extract } from "@/lib/ai/stage1-extract";
-import {
-  DEFAULT_NOTEBOOK_ID,
-  DEFAULT_STUDENT_ID,
-  IMAGE_BUCKET,
-  MODEL_VERSION_TAG,
-} from "@/lib/constants";
+import { resolveStudentForUser } from "@/lib/student";
+import { IMAGE_BUCKET, MODEL_VERSION_TAG } from "@/lib/constants";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -26,7 +22,8 @@ const EXT: Record<MediaType, string> = {
 // Stage 1(추출) 단독 실행 → 사용자 확인/교정 단계로 넘긴다.
 export async function POST(req: Request) {
   try {
-    await requireUser();
+    const user = await requireUser();
+    const me = await resolveStudentForUser(user);
     const { imageBase64, mediaType } = (await req.json()) as {
       imageBase64: string;
       mediaType: MediaType;
@@ -42,11 +39,11 @@ export async function POST(req: Request) {
     const hash = crypto.createHash("sha256").update(buf).digest("hex");
     const supa = createAdminClient();
 
-    // 동일 이미지 중복 분석 방지 (스펙 §7-5)
+    // 동일 이미지 중복 분석 방지 (스펙 §7-5) — 본인 오답 범위에서
     const { data: dup } = await supa
       .from("wrong_items")
       .select("id")
-      .eq("student_id", DEFAULT_STUDENT_ID)
+      .eq("student_id", me.studentId)
       .eq("image_hash", hash)
       .maybeSingle();
     if (dup) {
@@ -54,7 +51,7 @@ export async function POST(req: Request) {
     }
 
     // 이미지 업로드
-    const path = `${DEFAULT_STUDENT_ID}/${hash}.${EXT[mediaType]}`;
+    const path = `${me.studentId}/${hash}.${EXT[mediaType]}`;
     await supa.storage
       .from(IMAGE_BUCKET)
       .upload(path, buf, { contentType: mediaType, upsert: true });
@@ -68,8 +65,9 @@ export async function POST(req: Request) {
     const { data, error } = await supa
       .from("wrong_items")
       .insert({
-        notebook_id: DEFAULT_NOTEBOOK_ID,
-        student_id: DEFAULT_STUDENT_ID,
+        notebook_id: me.notebookId,
+        student_id: me.studentId,
+        tenant_id: me.tenantId,
         source_image_url: publicUrl,
         image_hash: hash,
         problem_latex: s1.problem_latex,

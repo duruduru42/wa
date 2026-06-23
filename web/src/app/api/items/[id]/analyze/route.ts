@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errMsg } from "@/lib/err";
 import { requireUser, authErrorResponse } from "@/lib/auth";
+import { resolveStudentForUser } from "@/lib/student";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runStage2Solve } from "@/lib/ai/stage2-solve";
 import { runStage3Verify } from "@/lib/ai/stage3-verify";
@@ -19,8 +20,10 @@ type Ctx = { params: Promise<{ id: string }> };
 export async function POST(_req: Request, { params }: Ctx) {
   const { id } = await params;
   const supa = createAdminClient();
+  let myStudentId: string;
   try {
-    await requireUser();
+    const user = await requireUser();
+    myStudentId = (await resolveStudentForUser(user)).studentId;
   } catch (e) {
     const a = authErrorResponse(e);
     if (a) return NextResponse.json({ error: a.error }, { status: a.status });
@@ -34,6 +37,8 @@ export async function POST(_req: Request, { params }: Ctx) {
       .maybeSingle<WrongItem>();
     if (error) throw error;
     if (!item) return NextResponse.json({ error: "not found" }, { status: 404 });
+    if (item.student_id !== myStudentId)
+      return NextResponse.json({ error: "권한 없음 (본인 오답이 아님)" }, { status: 403 });
     if (!item.problem_latex) {
       return NextResponse.json(
         { error: "problem_latex 가 비어있음 — 먼저 추출/교정 필요" },

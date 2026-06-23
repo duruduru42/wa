@@ -27,7 +27,17 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // 클라이언트 페이지(/capture)는 서버에서 리다이렉트 못 하므로 여기서 보호
+  if (!user && request.nextUrl.pathname.startsWith("/capture")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
   return response;
 }
 

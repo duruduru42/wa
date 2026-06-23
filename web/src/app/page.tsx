@@ -1,27 +1,36 @@
 import { errMsg } from "@/lib/err";
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DEFAULT_STUDENT_ID } from "@/lib/constants";
+import { createRLSClient } from "@/lib/supabase/server";
+import { resolveStudentForUser } from "@/lib/student";
 import { Card, VerificationBadge } from "@/components/ui";
 import type { WrongItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const rls = await createRLSClient();
+  const {
+    data: { user },
+  } = await rls.auth.getUser();
+
   let items: WrongItem[] = [];
   let dbError: string | null = null;
-  try {
-    const supa = createAdminClient();
-    const { data, error } = await supa
-      .from("wrong_items")
-      .select("*")
-      .eq("student_id", DEFAULT_STUDENT_ID)
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (error) throw error;
-    items = (data ?? []) as WrongItem[];
-  } catch (e) {
-    dbError = errMsg(e);
+  if (user) {
+    try {
+      const me = await resolveStudentForUser(user);
+      const supa = createAdminClient();
+      const { data, error } = await supa
+        .from("wrong_items")
+        .select("*")
+        .eq("student_id", me.studentId)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      items = (data ?? []) as WrongItem[];
+    } catch (e) {
+      dbError = errMsg(e);
+    }
   }
 
   return (
@@ -48,7 +57,14 @@ export default async function Home() {
           </Link>
         </div>
 
-        {dbError ? (
+        {!user ? (
+          <Card className="text-sm text-muted">
+            로그인하면 내 오답노트가 여기에 표시됩니다.{" "}
+            <Link href="/login" className="font-medium text-primary">
+              로그인 →
+            </Link>
+          </Card>
+        ) : dbError ? (
           <Card className="text-sm text-amber-700">
             DB 연결 실패 — Supabase 로컬이 켜져 있는지 확인하세요.
             <pre className="mt-2 overflow-x-auto text-xs text-muted">
