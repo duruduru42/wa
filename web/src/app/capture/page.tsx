@@ -1,38 +1,84 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Tex } from "@/components/Tex";
 import { Card } from "@/components/ui";
 import type { Stage1 } from "@/lib/ai/schemas";
 
-type Phase = "idle" | "extracting" | "review" | "analyzing";
+type Phase = "idle" | "crop" | "extracting" | "review" | "analyzing";
+type Rect = { x: number; y: number; w: number; h: number };
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export default function CapturePage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
-  const [preview, setPreview] = useState<string | null>(null);
+  const [imgSrc, setImgSrc] = useState<string | null>(null); // crop 대상
+  const [origMedia, setOrigMedia] = useState<string>("image/jpeg");
+  const [usedImg, setUsedImg] = useState<string | null>(null); // 분석에 쓴 이미지
   const [itemId, setItemId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Stage1 | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  async function onFile(file: File) {
-    setErr(null);
-    const mediaType = (ACCEPTED as readonly string[]).includes(file.type)
-      ? (file.type as (typeof ACCEPTED)[number])
-      : "image/jpeg";
-    const dataUrl = await new Promise<string>((res, rej) => {
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [sel, setSel] = useState<Rect | null>(null);
+  const drawing = useRef<{ x: number; y: number } | null>(null);
+
+  function readFile(file: File): Promise<string> {
+    return new Promise((res, rej) => {
       const r = new FileReader();
       r.onload = () => res(r.result as string);
       r.onerror = rej;
       r.readAsDataURL(file);
     });
-    setPreview(dataUrl);
-    const base64 = dataUrl.split(",")[1];
+  }
 
+  async function onFile(file: File) {
+    setErr(null);
+    setSel(null);
+    setOrigMedia(
+      (ACCEPTED as readonly string[]).includes(file.type)
+        ? file.type
+        : "image/jpeg",
+    );
+    setImgSrc(await readFile(file));
+    setPhase("crop");
+  }
+
+  function pos(e: React.PointerEvent) {
+    const rect = boxRef.current!.getBoundingClientRect();
+    return {
+      x: Math.min(Math.max(e.clientX - rect.left, 0), rect.width),
+      y: Math.min(Math.max(e.clientY - rect.top, 0), rect.height),
+    };
+  }
+  function onDown(e: React.PointerEvent) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const p = pos(e);
+    drawing.current = p;
+    setSel({ x: p.x, y: p.y, w: 0, h: 0 });
+  }
+  function onMove(e: React.PointerEvent) {
+    if (!drawing.current) return;
+    const p = pos(e);
+    const s = drawing.current;
+    setSel({
+      x: Math.min(s.x, p.x),
+      y: Math.min(s.y, p.y),
+      w: Math.abs(p.x - s.x),
+      h: Math.abs(p.y - s.y),
+    });
+  }
+  function onUp() {
+    drawing.current = null;
+    setSel((s) => (s && (s.w < 12 || s.h < 12) ? null : s));
+  }
+
+  async function runExtract(base64: string, mediaType: string) {
     setPhase("extracting");
+    setErr(null);
     try {
       const res = await fetch("/api/items/extract", {
         method: "POST",
@@ -50,8 +96,34 @@ export default function CapturePage() {
       setPhase("review");
     } catch (e) {
       setErr(String(e));
-      setPhase("idle");
+      setPhase("crop");
     }
+  }
+
+  function useFull() {
+    if (!imgSrc) return;
+    setUsedImg(imgSrc);
+    runExtract(imgSrc.split(",")[1], origMedia);
+  }
+
+  function useCrop() {
+    const img = imgRef.current,
+      box = boxRef.current;
+    if (!img || !box || !sel) return;
+    const rect = box.getBoundingClientRect();
+    const sx = (sel.x / rect.width) * img.naturalWidth;
+    const sy = (sel.y / rect.height) * img.naturalHeight;
+    const sw = (sel.w / rect.width) * img.naturalWidth;
+    const sh = (sel.h / rect.height) * img.naturalHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(sw));
+    canvas.height = Math.max(1, Math.round(sh));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    setUsedImg(dataUrl);
+    runExtract(dataUrl.split(",")[1], "image/jpeg");
   }
 
   async function analyze() {
@@ -59,7 +131,6 @@ export default function CapturePage() {
     setPhase("analyzing");
     setErr(null);
     try {
-      // 1) 사용자 교정 반영 (스펙 §2: 교정 후 [3]부터 재실행 가능)
       await fetch(`/api/items/${itemId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -70,10 +141,7 @@ export default function CapturePage() {
           student_work: draft.student_work,
         }),
       });
-      // 2) Stage 2→3→4
-      const res = await fetch(`/api/items/${itemId}/analyze`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/items/${itemId}/analyze`, { method: "POST" });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "분석 실패");
       router.push(`/item/${itemId}`);
@@ -83,6 +151,16 @@ export default function CapturePage() {
     }
   }
 
+  function reset() {
+    setPhase("idle");
+    setImgSrc(null);
+    setSel(null);
+    setUsedImg(null);
+    setItemId(null);
+    setDraft(null);
+    setErr(null);
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">새 오답 등록</h1>
@@ -90,8 +168,8 @@ export default function CapturePage() {
       {phase === "idle" && (
         <Card className="space-y-3">
           <p className="text-sm text-muted">
-            틀린 문제를 촬영하거나 사진을 선택하세요. 인쇄체 문제와 손글씨 풀이가
-            함께 있어도 됩니다.
+            틀린 문제를 촬영하거나 사진을 선택하세요. 여러 문제가 같이 찍혀도
+            다음 단계에서 한 문제만 잘라낼 수 있습니다.
           </p>
           <label className="block">
             <span className="sr-only">사진 선택</span>
@@ -109,12 +187,63 @@ export default function CapturePage() {
         </Card>
       )}
 
-      {preview && phase !== "idle" && (
+      {phase === "crop" && imgSrc && (
+        <div className="space-y-3">
+          <Card className="space-y-2">
+            <p className="text-sm text-muted">
+              분석할 <b>한 문제 영역을 손가락으로 드래그</b>해 박스로 선택하세요.
+              전체를 쓰려면 아래 버튼을 누르세요.
+            </p>
+            <div
+              ref={boxRef}
+              onPointerDown={onDown}
+              onPointerMove={onMove}
+              onPointerUp={onUp}
+              className="relative w-full touch-none select-none overflow-hidden rounded-xl border border-border"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                ref={imgRef}
+                src={imgSrc}
+                alt="선택할 문제 사진"
+                draggable={false}
+                className="block w-full"
+              />
+              {sel && (
+                <div
+                  className="pointer-events-none absolute border-2 border-primary bg-primary/20"
+                  style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }}
+                />
+              )}
+            </div>
+          </Card>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={useCrop}
+              disabled={!sel}
+              className="rounded-lg bg-primary py-3 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              선택 영역 분석
+            </button>
+            <button
+              onClick={useFull}
+              className="rounded-lg border border-border bg-card py-3 text-sm font-medium"
+            >
+              전체 사진 분석
+            </button>
+          </div>
+          <button onClick={reset} className="w-full text-xs text-muted underline">
+            다른 사진 선택
+          </button>
+        </div>
+      )}
+
+      {usedImg && (phase === "review" || phase === "analyzing") && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={preview}
-          alt="업로드한 문제"
-          className="max-h-64 w-full rounded-xl border border-border object-contain"
+          src={usedImg}
+          alt="분석 대상"
+          className="max-h-56 w-full rounded-xl border border-border object-contain"
         />
       )}
 
@@ -127,9 +256,7 @@ export default function CapturePage() {
         </Card>
       )}
 
-      {err && (
-        <Card className="text-sm text-red-600">오류: {err}</Card>
-      )}
+      {err && <Card className="text-sm text-red-600">오류: {err}</Card>}
 
       {phase === "review" && draft && (
         <div className="space-y-4">

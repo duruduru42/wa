@@ -1,10 +1,20 @@
 import { NextResponse } from "next/server";
-import { chromium } from "playwright";
 import { errMsg } from "@/lib/err";
 import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
+
+// Playwright는 동적 임포트 — 서버리스(Vercel 등 chromium 미설치) 환경에서
+// 빌드/모듈 부재로 깨지지 않게 가드한다.
+async function getChromium() {
+  try {
+    const pw = await import("playwright");
+    return pw.chromium;
+  } catch {
+    return null;
+  }
+}
 
 // POST /api/export/pdf  { ids?: string[], mode?: 'full'|'exam', tag?: string }
 // 앱 뷰와 동일한 KaTeX 렌더 경로(/print/notebook)를 Playwright로 PDF화 (스펙 §7-1 권장안 b).
@@ -14,6 +24,13 @@ export async function POST(req: Request) {
   let browser;
   try {
     await requireUser();
+    const chromium = await getChromium();
+    if (!chromium) {
+      return NextResponse.json(
+        { error: "이 환경에서는 PDF 내보내기를 지원하지 않습니다(서버리스)." },
+        { status: 503 },
+      );
+    }
     const body = (await req.json().catch(() => ({}))) as {
       ids?: string[];
       mode?: "full" | "exam";
@@ -38,7 +55,14 @@ export async function POST(req: Request) {
       })
       .filter((c) => c.name);
 
-    browser = await chromium.launch();
+    try {
+      browser = await chromium.launch();
+    } catch {
+      return NextResponse.json(
+        { error: "이 환경에서는 PDF 내보내기를 지원하지 않습니다(브라우저 미설치)." },
+        { status: 503 },
+      );
+    }
     const context = await browser.newContext();
     if (cookies.length) await context.addCookies(cookies);
     const page = await context.newPage();
