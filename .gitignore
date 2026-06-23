@@ -13,6 +13,23 @@ verifier/__pycache__/
 .temp
 supabase/.temp/
 
+# Capacitor (네이티브 프로젝트는 커밋, 빌드 산출물만 제외)
+web/android/.gradle/
+web/android/build/
+web/android/app/build/
+web/android/local.properties
+web/android/.idea/
+web/android/capacitor-cordova-android-plugins/
+web/android/app/src/main/assets/public/
+web/android/app/src/main/assets/capacitor.config.json
+web/android/app/src/main/assets/capacitor.plugins.json
+web/ios/App/Pods/
+web/ios/App/build/
+web/ios/App/App/public/
+web/ios/App/App/capacitor.config.json
+web/ios/App/App/config.xml
+**/*.apk
+
 # OS
 .DS_Store
 Thumbs.db
