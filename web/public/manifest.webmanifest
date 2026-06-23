@@ -1,0 +1,17 @@
+{
+  "name": "AI 오답노트",
+  "short_name": "오답노트",
+  "description": "사진 한 장으로 오답을 분석·검산·유사문제까지",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
