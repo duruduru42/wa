@@ -26,6 +26,7 @@ export async function runStage2Solve(input: {
     system: SYSTEM,
     user,
     schema: Stage2Schema,
-    maxTokens: 3072,
+    // 어려운 문제는 풀이가 길어 JSON이 잘리지 않게 넉넉히
+    maxTokens: 8192,
   });
 }

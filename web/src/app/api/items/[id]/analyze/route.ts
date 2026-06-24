@@ -46,7 +46,8 @@ export async function POST(_req: Request, { params }: Ctx) {
       );
     }
 
-    // Stage 2(풀이) → Stage 3(검산). 불일치면 오류 대신 재생성 재시도(최대 3회).
+    // Stage 2(풀이) → Stage 3(검산). 불일치면 오류 대신 1회 재생성 재시도.
+    const started = Date.now();
     let s2 = await runStage2Solve({
       problem_latex: item.problem_latex,
       problem_text: item.problem_text,
@@ -56,16 +57,22 @@ export async function POST(_req: Request, { params }: Ctx) {
       problem_plaintext: item.problem_text,
       stage2: s2,
     });
-    for (let attempt = 1; attempt < 3 && s3.verification_status === "mismatch"; attempt++) {
-      s2 = await runStage2Solve({
+    // 불일치면 1회 재시도 — 단 남은 시간 예산(서버리스 제한)이 충분할 때만.
+    if (s3.verification_status === "mismatch" && Date.now() - started < 45000) {
+      const r2 = await runStage2Solve({
         problem_latex: item.problem_latex,
         problem_text: item.problem_text,
       });
-      s3 = await runStage3Verify({
+      const r3 = await runStage3Verify({
         problem_latex: item.problem_latex,
         problem_plaintext: item.problem_text,
-        stage2: s2,
+        stage2: r2,
       });
+      // 더 나은 결과(불일치 아님)면 채택
+      if (r3.verification_status !== "mismatch") {
+        s2 = r2;
+        s3 = r3;
+      }
     }
 
     // Stage 4: 오답 원인 + 태깅
