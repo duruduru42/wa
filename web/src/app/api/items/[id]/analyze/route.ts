@@ -46,18 +46,27 @@ export async function POST(_req: Request, { params }: Ctx) {
       );
     }
 
-    // Stage 2: 정답 & 모범 풀이
-    const s2 = await runStage2Solve({
+    // Stage 2(풀이) → Stage 3(검산). 불일치면 오류 대신 재생성 재시도(최대 3회).
+    let s2 = await runStage2Solve({
       problem_latex: item.problem_latex,
       problem_text: item.problem_text,
     });
-
-    // Stage 3: 검산 (sympy 우선, 불가 시 2차 LLM)
-    const s3 = await runStage3Verify({
+    let s3 = await runStage3Verify({
       problem_latex: item.problem_latex,
       problem_plaintext: item.problem_text,
       stage2: s2,
     });
+    for (let attempt = 1; attempt < 3 && s3.verification_status === "mismatch"; attempt++) {
+      s2 = await runStage2Solve({
+        problem_latex: item.problem_latex,
+        problem_text: item.problem_text,
+      });
+      s3 = await runStage3Verify({
+        problem_latex: item.problem_latex,
+        problem_plaintext: item.problem_text,
+        stage2: s2,
+      });
+    }
 
     // Stage 4: 오답 원인 + 태깅
     const s4 = await runStage4Analyze({

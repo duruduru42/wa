@@ -1,6 +1,7 @@
 "use client";
 import katex from "katex";
 import { Fragment, useMemo } from "react";
+import { latexSymbols } from "@/lib/latex";
 
 // LaTeX 한 덩어리를 렌더 (앱 뷰와 PDF가 동일 경로 — 스펙 §7-1 일관성)
 export function Tex({
@@ -82,7 +83,7 @@ function renderSegment(seg: string, keyBase: string): React.ReactNode {
       <Tex key={`${keyBase}-t${i}`}>{p.slice(1, -1)}</Tex>
     ) : (
       <Fragment key={`${keyBase}-s${i}`}>
-        {supSubNodes(p, `${keyBase}-${i}`)}
+        {supSubNodes(latexSymbols(p), `${keyBase}-${i}`)}
       </Fragment>
     ),
   );

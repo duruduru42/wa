@@ -9,8 +9,8 @@ const config: CapacitorConfig = {
   appName: "AI 오답노트",
   webDir: "capacitor-www",
   server: {
-    url: process.env.CAP_SERVER_URL || "http://192.168.219.109:3000",
-    cleartext: true,
+    // Vercel 고정 배포 URL — PC·터널 없이 어디서나 항상 동작. 주소 안 바뀜.
+    url: process.env.CAP_SERVER_URL || "https://wa-nine-sigma.vercel.app",
   },
 };
 

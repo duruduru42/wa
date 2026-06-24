@@ -4,8 +4,8 @@
   "description": "사진 한 장으로 오답을 분석·검산·유사문제까지",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f8fa",
-  "theme_color": "#4f46e5",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
   "icons": [
     {
       "src": "/icon.svg",

@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { Tex } from "@/components/Tex";
 import { Card } from "@/components/ui";
 import type { Stage1 } from "@/lib/ai/schemas";
 
@@ -14,9 +13,9 @@ const ACCEPTED = ["image/jpeg", "image/png", "image/webp"] as const;
 export default function CapturePage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("idle");
-  const [imgSrc, setImgSrc] = useState<string | null>(null); // crop 대상
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [origMedia, setOrigMedia] = useState<string>("image/jpeg");
-  const [usedImg, setUsedImg] = useState<string | null>(null); // 분석에 쓴 이미지
+  const [usedImg, setUsedImg] = useState<string | null>(null);
   const [itemId, setItemId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Stage1 | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -161,6 +160,68 @@ export default function CapturePage() {
     setErr(null);
   }
 
+  // 전체화면 절삭 오버레이
+  if (phase === "crop" && imgSrc) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-black">
+        <div className="px-4 pt-3 text-center text-sm text-white/80">
+          분석할 <b className="text-white">한 문제 영역을 드래그</b>해 선택하세요
+        </div>
+        <div className="flex flex-1 items-center justify-center overflow-hidden p-2">
+          <div
+            ref={boxRef}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            className="relative inline-block touch-none select-none"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={imgSrc}
+              alt="선택할 문제 사진"
+              draggable={false}
+              className="block max-h-[78vh] max-w-full"
+            />
+            {sel && (
+              <div
+                className="pointer-events-none absolute border-2 border-primary bg-primary/25"
+                style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }}
+              />
+            )}
+          </div>
+        </div>
+        {err && (
+          <div className="px-4 pb-1 text-center text-sm text-red-400">{err}</div>
+        )}
+        <div
+          className="grid grid-cols-2 gap-2 border-t border-white/10 bg-card p-3"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+        >
+          <button
+            onClick={useCrop}
+            disabled={!sel}
+            className="rounded-lg bg-primary py-3 text-sm font-semibold text-white disabled:opacity-40"
+          >
+            선택 영역 분석
+          </button>
+          <button
+            onClick={useFull}
+            className="rounded-lg border border-border bg-background py-3 text-sm font-medium"
+          >
+            전체 사진 분석
+          </button>
+          <button
+            onClick={reset}
+            className="col-span-2 py-1 text-xs text-muted underline"
+          >
+            다른 사진 선택
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold">새 오답 등록</h1>
@@ -187,57 +248,6 @@ export default function CapturePage() {
         </Card>
       )}
 
-      {phase === "crop" && imgSrc && (
-        <div className="space-y-3">
-          <Card className="space-y-2">
-            <p className="text-sm text-muted">
-              분석할 <b>한 문제 영역을 손가락으로 드래그</b>해 박스로 선택하세요.
-              전체를 쓰려면 아래 버튼을 누르세요.
-            </p>
-            <div
-              ref={boxRef}
-              onPointerDown={onDown}
-              onPointerMove={onMove}
-              onPointerUp={onUp}
-              className="relative w-full touch-none select-none overflow-hidden rounded-xl border border-border"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={imgRef}
-                src={imgSrc}
-                alt="선택할 문제 사진"
-                draggable={false}
-                className="block w-full"
-              />
-              {sel && (
-                <div
-                  className="pointer-events-none absolute border-2 border-primary bg-primary/20"
-                  style={{ left: sel.x, top: sel.y, width: sel.w, height: sel.h }}
-                />
-              )}
-            </div>
-          </Card>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={useCrop}
-              disabled={!sel}
-              className="rounded-lg bg-primary py-3 text-sm font-semibold text-white disabled:opacity-40"
-            >
-              선택 영역 분석
-            </button>
-            <button
-              onClick={useFull}
-              className="rounded-lg border border-border bg-card py-3 text-sm font-medium"
-            >
-              전체 사진 분석
-            </button>
-          </div>
-          <button onClick={reset} className="w-full text-xs text-muted underline">
-            다른 사진 선택
-          </button>
-        </div>
-      )}
-
       {usedImg && (phase === "review" || phase === "analyzing") && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -256,7 +266,9 @@ export default function CapturePage() {
         </Card>
       )}
 
-      {err && <Card className="text-sm text-red-600">오류: {err}</Card>}
+      {err && phase !== "crop" && (
+        <Card className="text-sm text-red-600">오류: {err}</Card>
+      )}
 
       {phase === "review" && draft && (
         <div className="space-y-4">
@@ -265,7 +277,7 @@ export default function CapturePage() {
               추출 신뢰도{" "}
               <b
                 className={
-                  draft.confidence < 0.6 ? "text-amber-600" : "text-green-600"
+                  draft.confidence < 0.6 ? "text-amber-500" : "text-green-500"
                 }
               >
                 {Math.round(draft.confidence * 100)}%
@@ -276,13 +288,7 @@ export default function CapturePage() {
           </Card>
 
           <EditField
-            label="문제 (LaTeX)"
-            value={draft.problem_latex}
-            onChange={(v) => setDraft({ ...draft, problem_latex: v })}
-            preview={draft.problem_latex}
-          />
-          <EditField
-            label="문제 (평문)"
+            label="문제"
             value={draft.problem_plaintext}
             onChange={(v) => setDraft({ ...draft, problem_plaintext: v })}
           />
@@ -313,12 +319,10 @@ function EditField({
   label,
   value,
   onChange,
-  preview,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  preview?: string;
 }) {
   return (
     <Card className="space-y-2">
@@ -329,12 +333,6 @@ function EditField({
         rows={2}
         className="w-full resize-y rounded-lg border border-border bg-background p-2 text-sm"
       />
-      {preview !== undefined && value && (
-        <div className="rounded-lg bg-background p-2 text-sm">
-          <span className="text-xs text-muted">미리보기: </span>
-          <Tex block>{preview}</Tex>
-        </div>
-      )}
     </Card>
   );
 }

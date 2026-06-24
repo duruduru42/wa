@@ -4,6 +4,7 @@ import "./globals.css";
 import { createRLSClient } from "@/lib/supabase/server";
 import { AuthControls } from "@/components/AuthControls";
 import { BottomNav } from "@/components/BottomNav";
+import { BackButtonHandler } from "@/components/BackButtonHandler";
 
 export const metadata: Metadata = {
   title: "AI 오답노트",
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4f46e5",
+  themeColor: "#0f1115",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -44,6 +45,7 @@ export default async function RootLayout({
           {children}
         </main>
         <BottomNav />
+        <BackButtonHandler />
       </body>
     </html>
   );
