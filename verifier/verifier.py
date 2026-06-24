@@ -225,6 +225,10 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    addr = ("127.0.0.1", 8000)
-    print(f"[verifier] sympy 검산 서비스 시작 http://{addr[0]}:{addr[1]}  (latex={_HAS_LATEX})")
-    ThreadingHTTPServer(addr, Handler).serve_forever()
+    import os
+
+    # 클라우드(Render 등)에선 0.0.0.0 + PORT 환경변수. 로컬은 127.0.0.1:8000.
+    port = int(os.environ.get("PORT", "8000"))
+    host = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
+    print(f"[verifier] sympy 검산 서비스 시작 http://{host}:{port}  (latex={_HAS_LATEX})")
+    ThreadingHTTPServer((host, port), Handler).serve_forever()

@@ -64,6 +64,7 @@ export type VerifierResult = z.infer<typeof VerifierResultSchema>;
 
 // --- Stage 4: 오답 원인 분석 ---
 export const Stage4Schema = z.object({
+  error_summary: z.string(), // 한 문장 핵심 요약 (복습용 #3)
   error_explanation: z.string(),
   error_tags: z.array(ErrorTag).min(1),
   tag_confidence: z.number().min(0).max(1),

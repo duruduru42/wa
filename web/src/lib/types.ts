@@ -30,9 +30,13 @@ export interface WrongItem {
   verification_status: VerificationStatus;
   verification_note: string | null;
 
+  error_summary: string | null;
   error_explanation: string | null;
   error_tags: string[];
   tag_confidence: number | null;
+  student_reason: string | null;
+  student_tags: string[];
+  reviewed_at: string | null;
 
   subject: string | null;
   unit: string | null;

@@ -83,9 +83,20 @@ export default async function NotebookPage({
                       note={it.verification_note}
                     />
                   </div>
+                  {it.error_summary && (
+                    <div className="truncate text-xs font-medium text-primary">
+                      💡 {it.error_summary}
+                    </div>
+                  )}
+                  {it.student_reason && (
+                    <div className="truncate text-xs text-muted">
+                      ✍️ {it.student_reason}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <ErrorTags tags={it.error_tags} />
                     <span className="text-xs text-muted">
+                      {it.reviewed_at ? "✅ 복습함 · " : ""}
                       {new Date(it.created_at).toLocaleDateString("ko-KR")}
                     </span>
                   </div>

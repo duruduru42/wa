@@ -1,0 +1,13 @@
+# sympy 검산 마이크로서비스 클라우드 배포 (Render Blueprint)
+# Render 가입 → New → Blueprint → 이 저장소 선택 → 배포.
+# 배포 후 받은 URL(예: https://wa-verifier.onrender.com)을
+# Vercel 프로젝트의 VERIFIER_URL 환경변수에 넣으면 정밀 검산이 켜진다.
+services:
+  - type: web
+    name: wa-verifier
+    runtime: python
+    rootDir: verifier
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python verifier.py
+    healthCheckPath: /health

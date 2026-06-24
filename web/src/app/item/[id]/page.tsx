@@ -11,6 +11,7 @@ import {
   VerificationBadge,
 } from "@/components/ui";
 import { VariantsPanel } from "@/components/VariantsPanel";
+import { ReviewInput } from "@/components/ReviewInput";
 import type { GeneratedProblem, WrongItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -125,11 +126,25 @@ export default async function ItemPage({
           {/* 오답 원인 */}
           <Card className="space-y-2">
             <div className="text-xs font-medium text-muted">틀린 이유</div>
-            <p className="text-sm leading-relaxed">
+            {item.error_summary && (
+              <p className="text-base font-bold leading-snug">
+                <MixedText>{item.error_summary}</MixedText>
+              </p>
+            )}
+            <p className="text-sm leading-relaxed text-foreground/80">
               <MixedText>{item.error_explanation ?? ""}</MixedText>
             </p>
             <ErrorTags tags={item.error_tags} />
           </Card>
+
+          {/* 복습 입력 (메타인지) */}
+          <ReviewInput
+            itemId={item.id}
+            aiTags={item.error_tags ?? []}
+            initialReason={item.student_reason}
+            initialTags={item.student_tags ?? []}
+            reviewed={!!item.reviewed_at}
+          />
         </>
       ) : (
         <Card className="text-sm text-muted">

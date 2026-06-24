@@ -92,6 +92,7 @@ export async function POST(_req: Request, { params }: Ctx) {
         difficulty: s2.difficulty,
         verification_status: s3.verification_status,
         verification_note: s3.verification_note,
+        error_summary: s4.error_summary,
         error_explanation: s4.error_explanation,
         error_tags: s4.error_tags,
         tag_confidence: s4.tag_confidence,
