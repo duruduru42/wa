@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Tex } from "./Tex";
+import { Tex, MixedText } from "./Tex";
 import { Card, SolutionSteps } from "./ui";
 import type { GeneratedProblem } from "@/lib/types";
 
@@ -17,10 +17,10 @@ export function VariantsPanel({
 }) {
   const router = useRouter();
   const [variants, setVariants] = useState<GeneratedProblem[]>(initial);
-  const [busy, setBusy] = useState<null | "A" | "B" | "reanalyze">(null);
+  const [busy, setBusy] = useState<null | "A" | "B" | "C" | "reanalyze">(null);
   const [err, setErr] = useState<string | null>(null);
 
-  async function generate(mode: "A" | "B") {
+  async function generate(mode: "A" | "B" | "C") {
     setBusy(mode);
     setErr(null);
     try {
@@ -71,6 +71,13 @@ export function VariantsPanel({
           {busy === "B" ? "생성 중…" : "유사문제 (모드 B·접근법동일)"}
         </button>
         <button
+          disabled={!analyzed || busy !== null}
+          onClick={() => generate("C")}
+          className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+        >
+          {busy === "C" ? "생성 중…" : "🧠 생각 유도 (식 세우기)"}
+        </button>
+        <button
           disabled={busy !== null}
           onClick={reanalyze}
           className="rounded-lg border border-border bg-card px-3 py-2 text-sm disabled:opacity-40"
@@ -100,6 +107,60 @@ export function VariantsPanel({
 }
 
 function VariantCard({ v }: { v: GeneratedProblem }) {
+  if (v.mode === "C") return <ThinkingCard v={v} />;
+  return <SolveCard v={v} />;
+}
+
+// 모드 C: 풀게 하지 않고, 조건/단계별로 '먼저 생각 → 펼쳐서 모범 사고 확인'
+function ThinkingCard({ v }: { v: GeneratedProblem }) {
+  const steps = v.thinking_steps ?? [];
+  return (
+    <Card className="space-y-3 border-emerald-600/40">
+      <div className="text-xs font-semibold text-emerald-500">
+        🧠 생각 유도 · 계산 말고 &quot;식 세우는 과정&quot;을 연습해봐
+      </div>
+      <Tex block>{v.variant_latex}</Tex>
+      <div className="space-y-2">
+        {steps.map((s, i) => (
+          <ThinkingStepRow key={i} index={i + 1} step={s} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function ThinkingStepRow({
+  index,
+  step,
+}: {
+  index: number;
+  step: { label: string; prompt: string; guide: string };
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-border bg-background p-2.5">
+      <div className="text-xs font-medium text-emerald-500">
+        {index}. {step.label}
+      </div>
+      <p className="mt-1 text-sm">
+        <MixedText>{step.prompt}</MixedText>
+      </p>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="mt-1.5 text-xs text-primary"
+      >
+        {open ? "접기" : "💡 먼저 생각해보고 → 모범 사고 보기"}
+      </button>
+      {open && (
+        <p className="mt-1.5 rounded bg-card p-2 text-sm leading-relaxed text-foreground/85">
+          <MixedText>{step.guide}</MixedText>
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SolveCard({ v }: { v: GeneratedProblem }) {
   const [show, setShow] = useState(false);
   const [answer, setAnswer] = useState("");
   const [grading, setGrading] = useState(false);

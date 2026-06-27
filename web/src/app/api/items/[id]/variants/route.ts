@@ -4,6 +4,7 @@ import { requireUser, authErrorResponse } from "@/lib/auth";
 import { resolveStudentForUser } from "@/lib/student";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { runStage5Variants } from "@/lib/ai/stage5-variants";
+import { runThinkingScaffold } from "@/lib/ai/stage-thinking";
 import { verifyAnswerOnly } from "@/lib/ai/stage3-verify";
 import { MODEL_VERSION_TAG } from "@/lib/constants";
 import type { WrongItem } from "@/lib/types";
@@ -22,7 +23,7 @@ export async function POST(req: Request, { params }: Ctx) {
     const user = await requireUser();
     const me = await resolveStudentForUser(user);
     const body = (await req.json().catch(() => ({}))) as {
-      mode?: "A" | "B";
+      mode?: "A" | "B" | "C";
       count?: number;
       difficultyDelta?: number;
     };
@@ -44,14 +45,39 @@ export async function POST(req: Request, { params }: Ctx) {
       );
     }
 
+    const stage2 = {
+      correct_answer: item.correct_answer,
+      solution_steps: item.solution_steps,
+      key_concepts: item.key_concepts,
+      difficulty: item.difficulty ?? 3,
+    };
+
+    // 모드 C: 생각 유도(식 세우기) — 풀게 하지 않고 사고 스캐폴드 1개 생성
+    if (mode === "C") {
+      const t = await runThinkingScaffold({
+        problem_latex: item.problem_latex,
+        stage2,
+      });
+      const { data: insertedC, error: cErr } = await supa
+        .from("generated_problems")
+        .insert({
+          wrong_item_id: id,
+          mode: "C",
+          variant_latex: t.variant_problem_latex,
+          thinking_steps: t.thinking_steps,
+          difficulty: t.difficulty,
+          verified: true, // 정답을 내지 않으므로 검산 불필요
+          model_version: MODEL_VERSION_TAG,
+        })
+        .select("*")
+        .single();
+      if (cErr) throw cErr;
+      return NextResponse.json({ variants: [insertedC] });
+    }
+
     const variants = await runStage5Variants({
       problem_latex: item.problem_latex,
-      stage2: {
-        correct_answer: item.correct_answer,
-        solution_steps: item.solution_steps,
-        key_concepts: item.key_concepts,
-        difficulty: item.difficulty ?? 3,
-      },
+      stage2,
       mode,
       count,
       difficultyDelta: body.difficultyDelta,

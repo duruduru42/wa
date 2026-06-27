@@ -59,13 +59,20 @@ export interface Attempt {
   created_at: string;
 }
 
+export interface ThinkingStep {
+  label: string;
+  prompt: string;
+  guide: string;
+}
+
 export interface GeneratedProblem {
   id: string;
   wrong_item_id: string;
-  mode: "A" | "B";
+  mode: "A" | "B" | "C";
   variant_latex: string;
   generated_answer: string | null;
   generated_solution: SolutionStep[];
+  thinking_steps?: ThinkingStep[];
   difficulty: number | null;
   verified: boolean;
   verification_note: string | null;

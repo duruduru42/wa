@@ -83,3 +83,17 @@ export const Stage5Schema = z.object({
 });
 export type Variant = z.infer<typeof VariantSchema>;
 export type Stage5 = z.infer<typeof Stage5Schema>;
+
+// --- 모드 C: 생각 유도(식 세우기) — 풀게 하지 않고 사고를 단계/조건별로 ---
+export const ThinkingStepSchema = z.object({
+  label: z.string(), // 조건/단계 이름 (예: "조건 (가)", "1단계: 미지수 설정")
+  prompt: z.string(), // 학생에게 던지는 유도 질문 (이 조건을 어떻게 식으로 옮길까?)
+  guide: z.string(), // 모범 사고: 이 조건의 의미 → 세워야 할 식 (계산은 하지 않음)
+});
+export const ThinkingSchema = z.object({
+  variant_problem_latex: z.string(),
+  thinking_steps: z.array(ThinkingStepSchema).min(2),
+  difficulty: z.number().int().min(1).max(5),
+});
+export type ThinkingStep = z.infer<typeof ThinkingStepSchema>;
+export type Thinking = z.infer<typeof ThinkingSchema>;
