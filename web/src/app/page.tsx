@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRLSClient } from "@/lib/supabase/server";
 import { resolveStudentForUser } from "@/lib/student";
-import { Card, VerificationBadge } from "@/components/ui";
+import { Card, VerificationBadge, ErrorTags } from "@/components/ui";
 import type { WrongItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -80,18 +80,23 @@ export default async function Home() {
             {items.map((it) => (
               <li key={it.id}>
                 <Link href={`/item/${it.id}`}>
-                  <Card className="flex items-center justify-between hover:border-primary">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">
+                  <Card className="space-y-1.5 hover:border-primary">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 truncate text-sm font-medium">
                         {it.problem_text || it.problem_latex || "(추출 중)"}
                       </div>
-                      <div className="text-xs text-muted">
-                        {it.subject ?? "수학"} · {it.unit ?? "단원 미정"}
-                      </div>
+                      <VerificationBadge
+                        status={it.verification_status}
+                        note={it.verification_note}
+                      />
                     </div>
-                    <VerificationBadge
-                      status={it.verification_status}
-                      note={it.verification_note}
+                    <div className="text-xs text-muted">
+                      {(it.subject ?? "수학") + " · " + (it.unit ?? "단원 미정")}
+                    </div>
+                    <ErrorTags
+                      tags={
+                        it.student_tags?.length ? it.student_tags : it.error_tags
+                      }
                     />
                   </Card>
                 </Link>

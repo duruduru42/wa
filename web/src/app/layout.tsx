@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { createRLSClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AuthControls } from "@/components/AuthControls";
 import { BottomNav } from "@/components/BottomNav";
 import { BackButtonHandler } from "@/components/BackButtonHandler";
@@ -26,6 +27,18 @@ export default async function RootLayout({
   const {
     data: { user },
   } = await supa.auth.getUser();
+  // 교사/관리자만 학원 탭 노출 (학생 계정엔 숨김)
+  let isStaff = false;
+  if (user) {
+    const { data } = await createAdminClient()
+      .from("memberships")
+      .select("id")
+      .eq("user_id", user.id)
+      .in("role", ["teacher", "admin"])
+      .limit(1)
+      .maybeSingle();
+    isStaff = !!data;
+  }
   return (
     <html lang="ko" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
@@ -44,7 +57,7 @@ export default async function RootLayout({
         <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-28 pt-5">
           {children}
         </main>
-        <BottomNav />
+        <BottomNav isStaff={isStaff} />
         <BackButtonHandler />
       </body>
     </html>

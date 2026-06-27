@@ -2,7 +2,7 @@ import type { VerificationStatus } from "@/lib/types";
 import type { SolutionStep } from "@/lib/ai/schemas";
 import { MixedText } from "./Tex";
 
-// 신뢰도 배지 — 모든 AI 산출물에 검증 상태 노출 (스펙 §8)
+// 검산 상태 — 평소엔 숨기고 '불일치'일 때만 표시(답이 검산과 달라 재확인 필요).
 export function VerificationBadge({
   status,
   note,
@@ -10,22 +10,13 @@ export function VerificationBadge({
   status: VerificationStatus;
   note?: string | null;
 }) {
-  const map: Record<VerificationStatus, { label: string; cls: string }> = {
-    verified: { label: "✅ 검산 통과", cls: "bg-green-100 text-green-800" },
-    mismatch: {
-      label: "⚠️ 불일치 — 사람 검수 권장",
-      cls: "bg-amber-100 text-amber-900",
-    },
-    unverifiable: { label: "❔ 검증 불가", cls: "bg-gray-100 text-gray-700" },
-    pending: { label: "… 대기", cls: "bg-gray-100 text-gray-500" },
-  };
-  const m = map[status];
+  if (status !== "mismatch") return null;
   return (
     <span
       title={note ?? undefined}
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${m.cls}`}
+      className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900"
     >
-      {m.label}
+      ⚠️ 답 재확인 필요
     </span>
   );
 }

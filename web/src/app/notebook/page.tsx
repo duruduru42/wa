@@ -73,7 +73,8 @@ export default async function NotebookPage({
           {items.map((it) => (
             <li key={it.id}>
               <Link href={`/item/${it.id}`}>
-                <Card className="space-y-2 hover:border-primary">
+                <Card className="space-y-1.5 hover:border-primary">
+                  {/* 문제 한 줄 */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 truncate text-sm font-medium">
                       {it.problem_text || it.problem_latex || "(추출 중)"}
@@ -83,23 +84,17 @@ export default async function NotebookPage({
                       note={it.verification_note}
                     />
                   </div>
-                  {it.error_summary && (
-                    <div className="truncate text-xs font-medium text-primary">
-                      💡 {it.error_summary}
-                    </div>
-                  )}
-                  {it.student_reason && (
-                    <div className="truncate text-xs text-muted">
-                      ✍️ {it.student_reason}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <ErrorTags tags={it.error_tags} />
-                    <span className="text-xs text-muted">
-                      {it.reviewed_at ? "✅ 복습함 · " : ""}
-                      {new Date(it.created_at).toLocaleDateString("ko-KR")}
-                    </span>
+                  {/* 단원 */}
+                  <div className="text-xs text-muted">
+                    {(it.subject ?? "수학") + " · " + (it.unit ?? "단원 미정")}
+                    {it.reviewed_at ? " · ✅ 복습함" : ""}
                   </div>
+                  {/* 틀린 이유 (칩) */}
+                  <ErrorTags
+                    tags={
+                      it.student_tags?.length ? it.student_tags : it.error_tags
+                    }
+                  />
                 </Card>
               </Link>
             </li>

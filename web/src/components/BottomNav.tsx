@@ -8,20 +8,21 @@ const ITEMS = [
   { href: "/capture", label: "등록", icon: "📷" },
   { href: "/notebook", label: "오답노트", icon: "📒" },
   { href: "/stats", label: "통계", icon: "📊" },
-  { href: "/academy", label: "학원", icon: "🏫" },
+  { href: "/academy", label: "학원", icon: "🏫", staffOnly: true },
 ];
 
-export function BottomNav() {
+export function BottomNav({ isStaff = false }: { isStaff?: boolean }) {
   const path = usePathname() || "/";
   // 로그인 화면 등에선 숨김
   if (path === "/login") return null;
+  const items = ITEMS.filter((it) => !it.staffOnly || isStaff);
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex max-w-3xl">
-        {ITEMS.map((it) => {
+        {items.map((it) => {
           const active =
             it.href === "/" ? path === "/" : path.startsWith(it.href);
           return (

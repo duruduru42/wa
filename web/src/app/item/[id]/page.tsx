@@ -104,10 +104,9 @@ export default async function ItemPage({
       {analyzed ? (
         <>
           {item.verification_status === "mismatch" && (
-            <Card className="border-amber-300 bg-amber-50 text-sm text-amber-900">
-              ⚠️ 코드 검산과 AI 풀이가 불일치합니다. 정답을 사람이 확인하는 것을
-              권장합니다. <br />
-              <span className="text-xs">{item.verification_note}</span>
+            <Card className="border-amber-300 bg-amber-500/10 text-sm text-amber-600">
+              ⚠️ 답이 검산과 달라 다시 계산했지만 여전히 불일치합니다 — 정답을 한 번
+              확인해 주세요.
             </Card>
           )}
 
