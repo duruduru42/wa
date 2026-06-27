@@ -15,19 +15,30 @@ export default async function Home() {
   } = await rls.auth.getUser();
 
   let items: WrongItem[] = [];
+  let reviewDue = 0;
   let dbError: string | null = null;
   if (user) {
     try {
       const me = await resolveStudentForUser(user);
       const supa = createAdminClient();
-      const { data, error } = await supa
-        .from("wrong_items")
-        .select("*")
-        .eq("student_id", me.studentId)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      items = (data ?? []) as WrongItem[];
+      const [list, due] = await Promise.all([
+        supa
+          .from("wrong_items")
+          .select("*")
+          .eq("student_id", me.studentId)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supa
+          .from("wrong_items")
+          .select("id", { count: "exact", head: true })
+          .eq("student_id", me.studentId)
+          .eq("status", "analyzed")
+          .not("review_due_at", "is", null)
+          .lte("review_due_at", new Date().toISOString()),
+      ]);
+      if (list.error) throw list.error;
+      items = (list.data ?? []) as WrongItem[];
+      reviewDue = due.count ?? 0;
     } catch (e) {
       dbError = errMsg(e);
     }
@@ -48,6 +59,24 @@ export default async function Home() {
           + 새 오답 등록
         </Link>
       </section>
+
+      {reviewDue > 0 && (
+        <Link href="/review" className="block">
+          <Card className="flex items-center justify-between border-primary/50 bg-primary/10 hover:border-primary">
+            <div>
+              <div className="text-sm font-semibold">
+                📅 오늘 복습할 오답 {reviewDue}개
+              </div>
+              <div className="text-xs text-muted">
+                틀린 이유를 떠올려보며 복습하면 안 까먹어요
+              </div>
+            </div>
+            <span className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white">
+              복습 시작
+            </span>
+          </Card>
+        </Link>
+      )}
 
       <section>
         <div className="mb-2 flex items-center justify-between">

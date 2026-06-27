@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/", label: "홈", icon: "🏠" },
   { href: "/capture", label: "등록", icon: "📷" },
+  { href: "/review", label: "복습", icon: "📅" },
   { href: "/notebook", label: "오답노트", icon: "📒" },
   { href: "/stats", label: "통계", icon: "📊" },
   { href: "/academy", label: "학원", icon: "🏫", staffOnly: true },

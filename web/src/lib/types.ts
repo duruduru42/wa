@@ -37,6 +37,10 @@ export interface WrongItem {
   student_reason: string | null;
   student_tags: string[];
   reviewed_at: string | null;
+  review_due_at: string | null;
+  review_interval: number;
+  review_ease: number;
+  review_reps: number;
 
   subject: string | null;
   unit: string | null;

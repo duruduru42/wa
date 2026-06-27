@@ -98,6 +98,8 @@ export async function POST(_req: Request, { params }: Ctx) {
         tag_confidence: s4.tag_confidence,
         status: "analyzed",
         model_version: MODEL_VERSION_TAG,
+        // 복습 스케줄 진입: 내일부터 복습 대상(SM-2)
+        review_due_at: new Date(Date.now() + 86400000).toISOString(),
       })
       .eq("id", id)
       .select("*")
