@@ -66,6 +66,8 @@ export type VerifierResult = z.infer<typeof VerifierResultSchema>;
 export const Stage4Schema = z.object({
   error_summary: z.string(), // 한 문장 핵심 요약 (복습용 #3)
   error_explanation: z.string(),
+  error_step: z.string().default(""), // 학생 풀이 중 처음 어긋난 부분(인용). 없으면 ""
+  error_fix: z.string().default(""), // 그 부분의 올바른 형태(한 줄). 없으면 ""
   error_tags: z.array(ErrorTag).min(1),
   tag_confidence: z.number().min(0).max(1),
 });

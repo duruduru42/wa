@@ -32,6 +32,8 @@ export interface WrongItem {
 
   error_summary: string | null;
   error_explanation: string | null;
+  error_step: string | null;
+  error_fix: string | null;
   error_tags: string[];
   tag_confidence: number | null;
   student_reason: string | null;

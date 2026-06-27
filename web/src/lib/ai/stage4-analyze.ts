@@ -8,6 +8,9 @@ const SYSTEM = `너는 학생의 오답 원인을 진단하는 수학 교사다.
 - error_tags는 반드시 다음 고정 목록에서만 고른다(복수 가능): ${ERROR_TAGS.join(", ")}.
 - 학생 풀이과정이 없으면 '제출 답'만으로 원인을 추정하되 tag_confidence를 낮춘다.
 - error_summary: 틀린 핵심 원인을 학생이 복습 때 떠올릴 수 있게 **한 문장(40자 내외)**으로. 예: "근의 부호를 반대로 적용했다.", "조건 (나)의 연속 조건을 빠뜨렸다."
+- error_step: 학생 풀이([학생 풀이])에서 **처음으로 어긋난 부분을 그대로 짧게 인용**한다. 학생 풀이가 없거나 어디가 틀렸는지 특정 불가하면 빈 문자열("").
+- error_fix: 그 error_step 부분을 **올바르게 고친 한 줄**. error_step이 빈 문자열이면 함께 "".
+- error_step/error_fix의 수식은 $...$로 감싼다.
 
 error_explanation 작성 규칙(가독성 중요):
 - 반드시 두괄식: 첫 줄에 핵심 원인을 한 문장으로 요약한다.
@@ -37,6 +40,6 @@ export async function runStage4Analyze(input: {
     system: SYSTEM,
     user,
     schema: Stage4Schema,
-    maxTokens: 2048,
+    maxTokens: 3072,
   });
 }

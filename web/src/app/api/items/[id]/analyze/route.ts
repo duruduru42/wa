@@ -94,6 +94,8 @@ export async function POST(_req: Request, { params }: Ctx) {
         verification_note: s3.verification_note,
         error_summary: s4.error_summary,
         error_explanation: s4.error_explanation,
+        error_step: s4.error_step || null,
+        error_fix: s4.error_fix || null,
         error_tags: s4.error_tags,
         tag_confidence: s4.tag_confidence,
         status: "analyzed",

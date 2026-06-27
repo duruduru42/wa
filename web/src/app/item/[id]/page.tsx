@@ -136,6 +136,30 @@ export default async function ItemPage({
             <ErrorTags tags={item.error_tags} />
           </Card>
 
+          {/* 풀이에서 틀린 위치 (#2) */}
+          {item.error_step && (
+            <Card className="space-y-2">
+              <div className="text-xs font-medium text-muted">
+                📍 내 풀이에서 틀린 곳
+              </div>
+              {item.student_work && (
+                <div className="whitespace-pre-wrap rounded-lg bg-background p-2 text-sm text-foreground/80">
+                  <MixedText>{item.student_work}</MixedText>
+                </div>
+              )}
+              <div className="space-y-1 text-sm">
+                <div className="text-red-500">
+                  ❌ <MixedText>{item.error_step}</MixedText>
+                </div>
+                {item.error_fix && (
+                  <div className="text-emerald-500">
+                    ✅ <MixedText>{item.error_fix}</MixedText>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* 복습 입력 (메타인지) */}
           <ReviewInput
             itemId={item.id}
