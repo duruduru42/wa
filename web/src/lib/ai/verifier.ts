@@ -19,7 +19,7 @@ export async function answersEqualSympy(input: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) return { ok: false, equal: null, note: `verifier ${res.status}` };
     return EqualSchema.parse(await res.json());
@@ -45,7 +45,7 @@ export async function verifyWithSympy(input: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
       // 검산은 짧게: 무한루프성 식 방지를 위해 서비스측에서도 타임아웃
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) {
       return {
